@@ -1,12 +1,14 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
+-- Get character and root
 local function getCharacterAndRootPart()
 	local character = player.Character or player.CharacterAdded:Wait()
 	local rootPart = character:WaitForChild("HumanoidRootPart")
 	return character, rootPart
 end
 
+-- Bring closest empty car to player and seat them in it
 local function bringClosestEmptyCarToPlayer()
 	local character, rootPart = getCharacterAndRootPart()
 	local civCars = workspace:FindFirstChild("CivCars")
@@ -67,15 +69,17 @@ local function bringClosestEmptyCarToPlayer()
 	targetPos = Vector3.new(targetPos.X, groundY + carSize.Y / 2 + 0.1, targetPos.Z)
 	local targetCFrame = CFrame.new(targetPos, targetPos + forward)
 
+	-- Move car to new spot
 	closestCar:PivotTo(targetCFrame)
 
+	-- Anchor all parts to make sure it stays
 	for _, part in ipairs(closestCar:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.Anchored = true
 		end
 	end
 
-	task.wait(0.3) -- Let physics settle
+	task.wait(0.2)
 
 	for _, part in ipairs(closestCar:GetDescendants()) do
 		if part:IsA("BasePart") then
@@ -88,18 +92,17 @@ local function bringClosestEmptyCarToPlayer()
 		posValue.Value = targetPos
 	end
 
-	-- ✅ Seat without ever teleporting: direct weld method
-	task.delay(0.1, function()
-		local driveSeat = closestCar:FindFirstChild("DriveSeat")
+	-- Sit player in the car like the owned car method
+	task.wait(0.3)
+	local driveSeat = closestCar:FindFirstChild("DriveSeat")
+	if driveSeat and driveSeat:IsA("VehicleSeat") then
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if driveSeat and humanoid then
-			-- Put character directly on the seat
-			character:SetPrimaryPartCFrame(driveSeat.CFrame + Vector3.new(0, 3, 0)) -- hover above seat to fall in
-			task.wait(0.1)
+		if humanoid then
 			driveSeat:Sit(humanoid)
 		end
-	end)
+	end
 
+	-- ✅ Final success message
 	Library:Notify({
 		Title = "Bring Nearest Car",
 		Description = "✅ Nearest car brought to you and entered!",
