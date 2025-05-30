@@ -66,17 +66,17 @@ local function bringClosestEmptyCarToPlayer()
 		groundY = rayResult.Position.Y
 	end
 
-	-- Position the car right next to the player on the ground
+	-- Position the car a bit in front of the player on the ground
 	local carSize = closestCar:GetExtentsSize()
 	local forward = rootPart.CFrame.LookVector
-	local targetPos = rootPart.Position + forward * (carSize.Z / 2 + 2.5) -- Slightly closer than before
-	targetPos = Vector3.new(targetPos.X, groundY + carSize.Y / 2 + 0.05, targetPos.Z) -- Reduce Y offset a bit
+	local targetPos = rootPart.Position + forward * (carSize.Z / 2 + 3)
+	targetPos = Vector3.new(targetPos.X, groundY + carSize.Y / 2 + 0.1, targetPos.Z)
 	local targetCFrame = CFrame.new(targetPos, targetPos + forward)
 
-	-- Move the car to the new position near the player
+	-- Move car
 	closestCar:PivotTo(targetCFrame)
 
-	-- Freeze parts to hold new position
+	-- Freeze parts
 	for _, part in ipairs(closestCar:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.Anchored = true
@@ -91,22 +91,26 @@ local function bringClosestEmptyCarToPlayer()
 		end
 	end
 
-	-- Update last position if a position value exists
+	-- ✅ Optional: update last position value if it exists
 	local posValue = closestCar:FindFirstChild("Position") or closestCar:FindFirstChild("LastLocation") or closestCar:FindFirstChild("SpawnPoint")
 	if posValue and posValue:IsA("Vector3Value") then
 		posValue.Value = targetPos
 	end
 
-	-- Seat the player in the car
-	task.wait(0.2)
-	local driveSeat = closestCar:FindFirstChild("DriveSeat")
-	if driveSeat and driveSeat:IsA("VehicleSeat") then
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			task.wait(0.1)
-			driveSeat:Sit(humanoid)
+	-- ✅ Only sit if you're still close (prevent teleport)
+	task.delay(0.2, function()
+		local currentRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local driveSeat = closestCar and closestCar:FindFirstChild("DriveSeat")
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if currentRoot and driveSeat and humanoid then
+			local distToCar = (driveSeat.Position - currentRoot.Position).Magnitude
+			if distToCar <= 10 then -- You’re close, safe to seat
+				driveSeat:Sit(humanoid)
+			else
+				warn("🚨 Prevented teleport: Car too far away at seat time.")
+			end
 		end
-	end
+	end)
 
 	-- Final notification
 	Library:Notify({
