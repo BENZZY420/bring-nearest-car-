@@ -1,14 +1,12 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Function to get character and HumanoidRootPart
 local function getCharacterAndRootPart()
 	local character = player.Character or player.CharacterAdded:Wait()
 	local rootPart = character:WaitForChild("HumanoidRootPart")
 	return character, rootPart
 end
 
--- Function to bring the closest empty car to the player and seat them in it
 local function bringClosestEmptyCarToPlayer()
 	local character, rootPart = getCharacterAndRootPart()
 	local civCars = workspace:FindFirstChild("CivCars")
@@ -21,7 +19,6 @@ local function bringClosestEmptyCarToPlayer()
 	local shortestDistance = math.huge
 	local playerPosition = rootPart.Position
 
-	-- Find the closest unoccupied car
 	for _, car in ipairs(civCars:GetChildren()) do
 		if car:IsA("Model") and car:FindFirstChild("DriveSeat") then
 			local driveSeat = car:FindFirstChild("DriveSeat")
@@ -44,7 +41,6 @@ local function bringClosestEmptyCarToPlayer()
 		return
 	end
 
-	-- Make sure the car has a PrimaryPart
 	if not closestCar.PrimaryPart then
 		closestCar.PrimaryPart = closestCar:FindFirstChild("PrimaryPart") or closestCar:FindFirstChildWhichIsA("BasePart")
 		if not closestCar.PrimaryPart then
@@ -53,7 +49,6 @@ local function bringClosestEmptyCarToPlayer()
 		end
 	end
 
-	-- Raycast to find the ground level where the player is
 	local rayOrigin = rootPart.Position + Vector3.new(0, 5, 0)
 	local rayDirection = Vector3.new(0, -50, 0)
 	local raycastParams = RaycastParams.new()
@@ -66,24 +61,21 @@ local function bringClosestEmptyCarToPlayer()
 		groundY = rayResult.Position.Y
 	end
 
-	-- Position the car a bit in front of the player on the ground
 	local carSize = closestCar:GetExtentsSize()
 	local forward = rootPart.CFrame.LookVector
 	local targetPos = rootPart.Position + forward * (carSize.Z / 2 + 3)
 	targetPos = Vector3.new(targetPos.X, groundY + carSize.Y / 2 + 0.1, targetPos.Z)
 	local targetCFrame = CFrame.new(targetPos, targetPos + forward)
 
-	-- Move car
 	closestCar:PivotTo(targetCFrame)
 
-	-- Freeze parts
 	for _, part in ipairs(closestCar:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.Anchored = true
 		end
 	end
 
-	task.wait(0.2)
+	task.wait(0.3) -- Let physics settle
 
 	for _, part in ipairs(closestCar:GetDescendants()) do
 		if part:IsA("BasePart") then
@@ -91,28 +83,23 @@ local function bringClosestEmptyCarToPlayer()
 		end
 	end
 
-	-- ✅ Optional: update last position value if it exists
 	local posValue = closestCar:FindFirstChild("Position") or closestCar:FindFirstChild("LastLocation") or closestCar:FindFirstChild("SpawnPoint")
 	if posValue and posValue:IsA("Vector3Value") then
 		posValue.Value = targetPos
 	end
 
-	-- ✅ Only sit if you're still close (prevent teleport)
-	task.delay(0.2, function()
-		local currentRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		local driveSeat = closestCar and closestCar:FindFirstChild("DriveSeat")
-		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		if currentRoot and driveSeat and humanoid then
-			local distToCar = (driveSeat.Position - currentRoot.Position).Magnitude
-			if distToCar <= 10 then -- You’re close, safe to seat
-				driveSeat:Sit(humanoid)
-			else
-				warn("🚨 Prevented teleport: Car too far away at seat time.")
-			end
+	-- ✅ Seat without ever teleporting: direct weld method
+	task.delay(0.1, function()
+		local driveSeat = closestCar:FindFirstChild("DriveSeat")
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if driveSeat and humanoid then
+			-- Put character directly on the seat
+			character:SetPrimaryPartCFrame(driveSeat.CFrame + Vector3.new(0, 3, 0)) -- hover above seat to fall in
+			task.wait(0.1)
+			driveSeat:Sit(humanoid)
 		end
 	end)
 
-	-- Final notification
 	Library:Notify({
 		Title = "Bring Nearest Car",
 		Description = "✅ Nearest car brought to you and entered!",
@@ -120,10 +107,8 @@ local function bringClosestEmptyCarToPlayer()
 	})
 end
 
--- Update character on respawn
 player.CharacterAdded:Connect(function()
 	getCharacterAndRootPart()
 end)
 
--- Automatically bring the car when the script runs
 bringClosestEmptyCarToPlayer()
