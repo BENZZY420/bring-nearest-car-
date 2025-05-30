@@ -66,17 +66,17 @@ local function bringClosestEmptyCarToPlayer()
 		groundY = rayResult.Position.Y
 	end
 
-	-- Position the car a bit in front of the player on the ground
+	-- Position the car right next to the player on the ground
 	local carSize = closestCar:GetExtentsSize()
 	local forward = rootPart.CFrame.LookVector
-	local targetPos = rootPart.Position + forward * (carSize.Z / 2 + 3)
-	targetPos = Vector3.new(targetPos.X, groundY + carSize.Y / 2 + 0.1, targetPos.Z)
+	local targetPos = rootPart.Position + forward * (carSize.Z / 2 + 2.5) -- Slightly closer than before
+	targetPos = Vector3.new(targetPos.X, groundY + carSize.Y / 2 + 0.05, targetPos.Z) -- Reduce Y offset a bit
 	local targetCFrame = CFrame.new(targetPos, targetPos + forward)
 
-	-- Move car
+	-- Move the car to the new position near the player
 	closestCar:PivotTo(targetCFrame)
 
-	-- 🔒 Freeze all parts to forcefully hold the new position
+	-- Freeze parts to hold new position
 	for _, part in ipairs(closestCar:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.Anchored = true
@@ -91,13 +91,13 @@ local function bringClosestEmptyCarToPlayer()
 		end
 	end
 
-	-- ✅ Optional: update last position value if it exists
+	-- Update last position if a position value exists
 	local posValue = closestCar:FindFirstChild("Position") or closestCar:FindFirstChild("LastLocation") or closestCar:FindFirstChild("SpawnPoint")
 	if posValue and posValue:IsA("Vector3Value") then
 		posValue.Value = targetPos
 	end
 
-	-- Seat the player in the car after a short delay
+	-- Seat the player in the car
 	task.wait(0.2)
 	local driveSeat = closestCar:FindFirstChild("DriveSeat")
 	if driveSeat and driveSeat:IsA("VehicleSeat") then
@@ -108,7 +108,7 @@ local function bringClosestEmptyCarToPlayer()
 		end
 	end
 
-	-- ✅ Final notification using your exact format
+	-- Final notification
 	Library:Notify({
 		Title = "Bring Nearest Car",
 		Description = "✅ Nearest car brought to you and entered!",
@@ -121,5 +121,5 @@ player.CharacterAdded:Connect(function()
 	getCharacterAndRootPart()
 end)
 
--- 🚗 Automatically bring the car when the script runs
+-- Automatically bring the car when the script runs
 bringClosestEmptyCarToPlayer()
